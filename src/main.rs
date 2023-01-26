@@ -57,8 +57,8 @@ fn main() {
         let separate_commands = parse_command::parse_command(&input);
 
         for separate_command in separate_commands {
-            for single_command_tokens in separate_command {
-                previous_command_succeed = execute::execute(single_command_tokens);
+            for command_with_pipes in separate_command {
+                previous_command_succeed = execute::execute(command_with_pipes);
                 if !previous_command_succeed {
                     break
                 }
