@@ -14,7 +14,7 @@ use parse_command::parse_command;
 
 fn main() {
     let home: String = env::var("HOME").unwrap();
-    let history_path: &str = &format!("{}/.rsh_history", home);
+    let history_path: &str = &format!("{home}/.rsh_history");
     // TODO: implement config parser
     // let config_path: String = format!("{}/.rshrc", home);
     let rsh_internal_err = format!("{}: unexpected internal error", red("rsh"));
@@ -51,7 +51,7 @@ fn main() {
                 break;
             },
             Err(_) => {
-                println!("{}", rsh_internal_err);
+                println!("{rsh_internal_err}");
                 break;
             }
         };
@@ -93,7 +93,7 @@ fn generate_prompt(previous_command_succeed: bool, working_directory: std::path:
         red("*")
     };
 
-    format!("{} {} $ ", exit_status_indicator, working_directory)
+    format!("{exit_status_indicator} {working_directory} $ ")
 }
 
 fn error_log(error: Box<dyn Error>) {
