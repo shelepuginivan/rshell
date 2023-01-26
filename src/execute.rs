@@ -1,8 +1,10 @@
+use core::str;
 use std::error::Error;
 use std::fs::File;
 use std::process::{Child, Command, Stdio};
-use std::env::{set_current_dir, var};
+use std::env::{set_current_dir, set_var, var};
 use std::path::Path;
+use std::str::SplitWhitespace;
 
 pub enum ExecutionResult {
     Success,
@@ -39,6 +41,8 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
             "cd" => return change_directory(args.next()),
 
             "exit" => return ExecutionResult::Exit,
+
+            "set" => return set_variable(args.next()),
 
             _ => {
                 let stdin = previous_command
@@ -79,7 +83,7 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                 let output = if write_to_file {
                     // write to the file for the first time
                     match Command::new(command)
-                        .args(args)
+                        .args(parse_variables_from_args(args))
                         .stdin(stdin)
                         .stdout(stdout)
                         .spawn() {
@@ -135,7 +139,7 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                             .spawn()
                 } else {
                     Command::new(command)
-                        .args(args)
+                        .args(parse_variables_from_args(args))
                         .stdin(stdin)
                         .stdout(stdout)
                         .spawn()
@@ -168,4 +172,43 @@ fn change_directory(directory: Option<&str>) -> ExecutionResult {
         Ok(_) => ExecutionResult::Success,
         Err(err) => ExecutionResult::Error(Box::new(err))
     }
+}
+
+fn set_variable(expression: Option<&str>) -> ExecutionResult {
+    let mut args = match expression {
+        Some(args) => args.split('='),
+        None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
+    };
+
+    let key = args.next().unwrap().trim();
+
+    let value = match args.next() {
+        Some(value) => value.trim(),
+        None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
+    };
+
+    set_var(key, value);
+
+    ExecutionResult::Success
+}
+
+fn parse_variables_from_args(args: SplitWhitespace) -> Vec<String>
+{
+    let mut parsed_args: Vec<String> = Vec::new();
+
+    for arg in args {
+        if arg.starts_with('$') {
+            let variable = arg.to_string().replace('$', "");
+            let value = match var(&variable) {
+                Ok(value) => value,
+                Err(_) => variable
+            };
+
+            parsed_args.push(value);
+        } else {
+            parsed_args.push(String::from(arg));
+        }
+    }
+
+    parsed_args
 }
