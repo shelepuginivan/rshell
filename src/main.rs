@@ -1,8 +1,10 @@
 mod colors;
 mod parse_command;
 mod execute;
+mod execute_code;
 
 use std::env;
+use std::io::Read;
 use std::process::exit;
 use std::error::Error;
 use std::fs::File;
@@ -10,6 +12,7 @@ use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use execute::*;
 use colors::*;
+use execute_code::execute_code;
 use parse_command::parse_command;
 
 fn main() {
@@ -28,6 +31,40 @@ fn main() {
     }
 
     let mut previous_command_succeed = true; 
+
+    if env::args().len() > 1 {
+        let filename = match env::args().nth(1) {
+            Some(filename) => filename,
+            None => exit(22)
+        };
+
+        let mut code = String::new();
+        let mut file = match File::options()
+            .read(true)
+            .open(std::path::Path::new(&filename)) {
+            Ok(file) => file,
+            Err(err) => {
+                error_log(Box::new(err));
+                exit(2)
+            }
+        };
+
+        match file.read_to_string(&mut code) {
+            Ok(_) => {},
+            Err(err) => {
+                error_log(Box::new(err));
+                exit(5)
+            }
+        }
+        
+        match execute_code(&code) {
+            ExecutionResult::Error(err) => {
+                error_log(err);
+                exit(1)
+            },
+            _ => exit(0)
+        }
+    }
 
     loop
     {
