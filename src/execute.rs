@@ -1,11 +1,18 @@
+use std::error::Error;
 use std::fs::File;
-use std::process::{Child, Command, Stdio, exit};
+use std::process::{Child, Command, Stdio};
 use std::env::{set_current_dir, var};
 use std::path::Path;
 
-pub fn execute(command_with_pipes: &str) -> bool {
+pub enum ExecutionResult {
+    Success,
+    Error(Box<dyn Error>),
+    Exit
+}
+
+pub fn execute(command_with_pipes: &str) -> ExecutionResult {
     if command_with_pipes.len() == 0 || command_with_pipes.starts_with("#") {
-        return true;
+        return ExecutionResult::Success;
     }
 
     let binding = command_with_pipes
@@ -31,7 +38,7 @@ pub fn execute(command_with_pipes: &str) -> bool {
         match command {
             "cd" => return change_directory(args.next()),
 
-            "exit" => exit(0),
+            "exit" => return ExecutionResult::Exit,
 
             _ => {
                 let stdin = previous_command
@@ -55,10 +62,7 @@ pub fn execute(command_with_pipes: &str) -> bool {
                             .truncate(write)
                             .open(filename) {
                                 Ok(file) => file,
-                                Err(err) => {
-                                    eprintln!("rsh: {err}");
-                                    return false;
-                                }
+                                Err(err) => return ExecutionResult::Error(Box::new(err))
                             };
 
                         write_to_file = true;
@@ -66,7 +70,7 @@ pub fn execute(command_with_pipes: &str) -> bool {
                     } else {
                         Stdio::piped()
                     };
-                    
+
                     stdio
                 } else {
                     Stdio::inherit()
@@ -80,10 +84,7 @@ pub fn execute(command_with_pipes: &str) -> bool {
                         .stdout(stdout)
                         .spawn() {
                             Ok(_) => {},
-                            Err(err) => {
-                                eprintln!("rsh: {err}");
-                                return false;
-                            }
+                            Err(err) => return ExecutionResult::Error(Box::new(err))
                         }
 
                     let mut previous_filename = commands.next().unwrap().replace("&a ", "").replace("&w ", "");
@@ -100,10 +101,7 @@ pub fn execute(command_with_pipes: &str) -> bool {
                             .truncate(!append)
                             .open(&filename) {
                                 Ok(file) => file,
-                                Err(err) => {
-                                    eprintln!("rsh: {err}");
-                                    return false;
-                                }
+                                Err(err) => return ExecutionResult::Error(Box::new(err))
                             };
 
                         let file_stream = Stdio::from(file);
@@ -118,10 +116,7 @@ pub fn execute(command_with_pipes: &str) -> bool {
                             .unwrap()
                             .wait() {
                                 Ok(_) => {},
-                                Err(err) => {
-                                    eprintln!("{err}");
-                                    return false;
-                                }
+                                Err(err) => return ExecutionResult::Error(Box::new(err))
                             }
 
                         previous_filename = filename;
@@ -150,19 +145,19 @@ pub fn execute(command_with_pipes: &str) -> bool {
                     Ok(output) => {
                         previous_command = Some(output);
                     },
-                    Err(e) => {
-                        previous_command = None;
-                        eprintln!("rsh: {}", e);
-                    }
+                    Err(err) => return ExecutionResult::Error(Box::new(err))
                 }
             }
         }
     }
 
-    previous_command.is_some() && previous_command.unwrap().wait().is_ok()
+    match previous_command.unwrap().wait() {
+        Ok(_) => ExecutionResult::Success,
+        Err(err) => ExecutionResult::Error(Box::new(err))
+    }
 }
 
-fn change_directory(directory: Option<&str>) -> bool {
+fn change_directory(directory: Option<&str>) -> ExecutionResult {
     let path = match directory {
         None => var("HOME").expect("rsh: unexpected internal error"),
         Some("~") => var("HOME").expect("rsh: unexpected internal error"),
@@ -170,10 +165,7 @@ fn change_directory(directory: Option<&str>) -> bool {
     };
 
     return match set_current_dir(Path::new(&path)) {
-        Ok(_) => true,
-        Err(err) => {
-            eprintln!("rsh: {err}");
-            false
-        }
+        Ok(_) => ExecutionResult::Success,
+        Err(err) => ExecutionResult::Error(Box::new(err))
     }
 }
