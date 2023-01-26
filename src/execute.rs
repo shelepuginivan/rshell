@@ -2,9 +2,9 @@ use core::str;
 use std::error::Error;
 use std::fs::File;
 use std::process::{Child, Command, Stdio};
-use std::env::{set_current_dir, set_var, var};
-use std::path::Path;
+use std::env::var;
 use std::str::SplitWhitespace;
+use crate::builtins;
 
 pub enum ExecutionResult {
     Success,
@@ -38,11 +38,11 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
         let mut args = tokens;
 
         match command {
-            "cd" => return change_directory(args.next()),
+            "cd" => return builtins::change_directory(args.next()),
 
             "exit" => return ExecutionResult::Exit,
 
-            "set" => return set_variable(args.next()),
+            "set" => return builtins::set_variable(args.next()),
 
             _ => {
                 let stdin = previous_command
@@ -161,43 +161,12 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
     }
 }
 
-fn change_directory(directory: Option<&str>) -> ExecutionResult {
-    let path = match directory {
-        None => var("HOME").expect("rsh: unexpected internal error"),
-        Some("~") => var("HOME").expect("rsh: unexpected internal error"),
-        Some(path) => String::from(path)
-    };
-
-    return match set_current_dir(Path::new(&path)) {
-        Ok(_) => ExecutionResult::Success,
-        Err(err) => ExecutionResult::Error(Box::new(err))
-    }
-}
-
-fn set_variable(expression: Option<&str>) -> ExecutionResult {
-    let mut args = match expression {
-        Some(args) => args.split('='),
-        None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
-    };
-
-    let key = args.next().unwrap().trim();
-
-    let value = match args.next() {
-        Some(value) => value.trim(),
-        None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
-    };
-
-    set_var(key, value);
-
-    ExecutionResult::Success
-}
-
 fn parse_variables_from_args(args: SplitWhitespace) -> Vec<String>
 {
     let mut parsed_args: Vec<String> = Vec::new();
 
     for arg in args {
-        if arg.starts_with('$') {
+        if arg.starts_with('$') && arg.len() > 1 {
             let variable = arg.to_string().replace('$', "");
             let value = match var(&variable) {
                 Ok(value) => value,
