@@ -23,7 +23,6 @@ fn main() {
     // load history and if it doesn't exist, creates new history file
     if rl.load_history(&history_path).is_err() {
         File::create(history_path).expect(&format!("{}: failed to create history file", rsh_err_log));
-        println!("");
     }
 
     let mut previous_command_succeed = true; 
