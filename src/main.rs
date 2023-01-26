@@ -1,28 +1,30 @@
-use std::env;
-use std::fs::File;
-use rustyline::Editor;
-use rustyline::error::ReadlineError;
-
-
 mod colors;
 mod parse_command;
 mod execute;
 
+use std::env;
+use std::process::exit;
+use std::error::Error;
+use std::fs::File;
+use rustyline::Editor;
+use rustyline::error::ReadlineError;
+use execute::*;
+use colors::*;
+use parse_command::parse_command;
 
 fn main() {
     let home: String = env::var("HOME").unwrap();
     let history_path: &str = &format!("{}/.rsh_history", home);
     // TODO: implement config parser
     // let config_path: String = format!("{}/.rshrc", home);
-    let rsh_err_log: String = colors::as_error("rsh");
-    let rsh_internal_err = format!("{}: unexpected internal error", rsh_err_log);
+    let rsh_internal_err = format!("{}: unexpected internal error", red("rsh"));
 
     let mut rl = Editor::<()>::new()
         .expect(&rsh_internal_err);
 
     // load history and if it doesn't exist, creates new history file
     if rl.load_history(&history_path).is_err() {
-        File::create(history_path).expect(&format!("{}: failed to create history file", rsh_err_log));
+        File::create(history_path).expect(&format!("{}: failed to create history file", red("rsh")));
     }
 
     let mut previous_command_succeed = true; 
@@ -54,11 +56,21 @@ fn main() {
             }
         };
 
-        let separate_commands = parse_command::parse_command(&input);
+        let separate_commands = parse_command(&input);
 
         for separate_command in separate_commands {
             for command_with_pipes in separate_command {
-                previous_command_succeed = execute::execute(command_with_pipes);
+                previous_command_succeed = match execute(command_with_pipes) {
+                    ExecutionResult::Success => true,
+                    ExecutionResult::Error(err) => {
+                        error_log(err);
+                        false
+                    },
+                    ExecutionResult::Exit => {
+                        rl.save_history(&history_path).unwrap();
+                        exit(0)
+                    }
+                };
                 if !previous_command_succeed {
                     break
                 }
@@ -67,7 +79,7 @@ fn main() {
     }
 
     rl.save_history(&history_path)
-        .expect(&format!("{}: failed to save history", rsh_err_log));
+        .expect(&format!("{}: failed to save history", red("rsh")));
 }
 
 fn generate_prompt(previous_command_succeed: bool, working_directory: std::path::Display) -> String {
@@ -76,10 +88,14 @@ fn generate_prompt(previous_command_succeed: bool, working_directory: std::path:
     // and prompt is generated with this parameter value
 
     let exit_status_indicator = if previous_command_succeed {
-        colors::as_success("*")
+        green("*")
     } else {
-        colors::as_error("*")
+        red("*")
     };
 
     format!("{} {} $ ", exit_status_indicator, working_directory)
+}
+
+fn error_log(error: Box<dyn Error>) {
+    eprintln!("{}: {error}", red("rsh"));
 }
