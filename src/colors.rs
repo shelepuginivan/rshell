@@ -6,10 +6,10 @@ pub const GREEN: &str = "\x1b[32m";
 pub const RESET: &str = "\x1b[0m";
 
 
-pub fn as_error(message: &str) -> String {
-    format!("{}{}{}", RED, message, RESET)
+pub fn red(text: &str) -> String {
+    format!("{}{}{}", RED, text, RESET)
 }
 
-pub fn as_success(message: &str) -> String {
-    format!("{}{}{}", GREEN, message, RESET)
+pub fn green(text: &str) -> String {
+    format!("{}{}{}", GREEN, text, RESET)
 }
