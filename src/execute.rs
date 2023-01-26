@@ -5,7 +5,7 @@ use std::path::Path;
 
 
 pub fn execute(raw_command: &str) -> bool {
-    if raw_command.len() == 0 {
+    if raw_command.len() == 0 || raw_command.starts_with("#") {
         return true;
     }
 
