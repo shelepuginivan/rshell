@@ -61,12 +61,18 @@ pub fn execute(raw_command: &str) -> bool {
                     let stdio = if append || write {
                         let filename_raw = commands.peek().unwrap().replace("&a ", "").replace("&w ", "");
                         let filename = filename_raw.trim();
-                        let file = File::options()
+                        let file = match File::options()
                             .create(!append)
                             .append(append)
                             .write(write)
                             .truncate(write)
-                            .open(filename).unwrap();
+                            .open(filename) {
+                                Ok(file) => file,
+                                Err(err) => {
+                                    eprintln!("rsh: {err}");
+                                    return false;
+                                }
+                            };
                         write_to_file = true;
                         Stdio::from(file)
                     } else {
@@ -86,7 +92,7 @@ pub fn execute(raw_command: &str) -> bool {
                         .spawn() {
                             Ok(_) => {},
                             Err(err) => {
-                                eprintln!("{err}");
+                                eprintln!("rsh: {err}");
                                 return false;
                             }
                         }
@@ -95,7 +101,6 @@ pub fn execute(raw_command: &str) -> bool {
                     let mut previous_filename = previous_filename_raw.replace("&a ", "").replace("&w ", "");
                     
                     while commands.peek().is_some() && commands.peek().unwrap().starts_with("&") {
-                        // while we write to the file
                         let append = commands.peek().unwrap().starts_with("&a");
                         let write = commands.peek().unwrap().starts_with("&w");
                         
@@ -110,7 +115,7 @@ pub fn execute(raw_command: &str) -> bool {
                             .open(&filename) {
                                 Ok(file) => file,
                                 Err(err) => {
-                                    eprintln!("{err}");
+                                    eprintln!("rsh: {err}");
                                     return false;
                                 }
                             };
@@ -138,8 +143,8 @@ pub fn execute(raw_command: &str) -> bool {
                     }
 
                     // after the cycle is finished, we have to output
-                    // file if there are some other pipes
-                    // and we have to output it to $NULL
+                    // file to pipe if there are some other pipes
+                    // and we have to output it to /dev/null
                     // if there are not
                     let has_pipes_after = commands.peek().is_some();
                     let stdout = if has_pipes_after {Stdio::piped()} else {Stdio::null()};
