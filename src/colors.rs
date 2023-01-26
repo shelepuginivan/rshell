@@ -5,11 +5,10 @@ pub const GREEN: &str = "\x1b[32m";
 
 pub const RESET: &str = "\x1b[0m";
 
-
 pub fn red(text: &str) -> String {
-    format!("{}{}{}", RED, text, RESET)
+    format!("{RED}{text}{RESET}")
 }
 
 pub fn green(text: &str) -> String {
-    format!("{}{}{}", GREEN, text, RESET)
+    format!("{GREEN}{text}{RESET}")
 }
