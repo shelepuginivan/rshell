@@ -3,13 +3,12 @@ use std::process::{Child, Command, Stdio, exit};
 use std::env::{set_current_dir, var};
 use std::path::Path;
 
-
-pub fn execute(raw_command: &str) -> bool {
-    if raw_command.len() == 0 || raw_command.starts_with("#") {
+pub fn execute(command_with_pipes: &str) -> bool {
+    if command_with_pipes.len() == 0 || command_with_pipes.starts_with("#") {
         return true;
     }
 
-    let binding = raw_command
+    let binding = command_with_pipes
         .replace(">>", "| &a")
         .replace(">", "| &w");
         
@@ -30,21 +29,7 @@ pub fn execute(raw_command: &str) -> bool {
         let mut args = tokens;
 
         match command {
-            "cd" => {
-                let path = match args.next() {
-                    Some("~") => var("HOME").expect("rsh: unexpected internal error"),
-                    Some(dir) => String::from(dir),
-                    None => var("HOME").expect("rsh: unexpected internal error")
-                };
-
-                match set_current_dir(Path::new(&path)) {
-                    Ok(_) => return true,
-                    Err(err) => {
-                        eprintln!("rsh: {}", err);
-                        return false;
-                    }
-                };
-            },
+            "cd" => return change_directory(args.next()),
 
             "exit" => exit(0),
 
@@ -58,9 +43,11 @@ pub fn execute(raw_command: &str) -> bool {
                 let stdout = if commands.peek().is_some() {
                     let append = commands.peek().unwrap().starts_with("&a");
                     let write = commands.peek().unwrap().starts_with("&w");
+
                     let stdio = if append || write {
-                        let filename_raw = commands.peek().unwrap().replace("&a ", "").replace("&w ", "");
-                        let filename = filename_raw.trim();
+                        let filename_untrimmed = commands.peek().unwrap().replace("&a ", "").replace("&w ", "");
+                        let filename = filename_untrimmed.trim();
+
                         let file = match File::options()
                             .create(!append)
                             .append(append)
@@ -73,11 +60,13 @@ pub fn execute(raw_command: &str) -> bool {
                                     return false;
                                 }
                             };
+
                         write_to_file = true;
                         Stdio::from(file)
                     } else {
                         Stdio::piped()
                     };
+                    
                     stdio
                 } else {
                     Stdio::inherit()
@@ -97,21 +86,18 @@ pub fn execute(raw_command: &str) -> bool {
                             }
                         }
 
-                    let previous_filename_raw = commands.next().unwrap().to_owned();
-                    let mut previous_filename = previous_filename_raw.replace("&a ", "").replace("&w ", "");
+                    let mut previous_filename = commands.next().unwrap().replace("&a ", "").replace("&w ", "");
                     
                     while commands.peek().is_some() && commands.peek().unwrap().starts_with("&") {
                         let append = commands.peek().unwrap().starts_with("&a");
-                        let write = commands.peek().unwrap().starts_with("&w");
                         
-                        let filename_raw = commands.peek().unwrap();
-                        let filename = filename_raw.replace("&a ", "").replace("&w ", "");
+                        let filename = commands.peek().unwrap().replace("&a ", "").replace("&w ", "");
 
                         let file = match File::options()
                             .create(!append)
                             .append(append)
-                            .write(write)
-                            .truncate(write)
+                            .write(!append)
+                            .truncate(!append)
                             .open(&filename) {
                                 Ok(file) => file,
                                 Err(err) => {
@@ -146,8 +132,7 @@ pub fn execute(raw_command: &str) -> bool {
                     // file to pipe if there are some other pipes
                     // and we have to output it to /dev/null
                     // if there are not
-                    let has_pipes_after = commands.peek().is_some();
-                    let stdout = if has_pipes_after {Stdio::piped()} else {Stdio::null()};
+                    let stdout = if commands.peek().is_some() {Stdio::piped()} else {Stdio::null()};
 
                     Command::new("cat")
                             .arg(previous_filename)
@@ -160,6 +145,7 @@ pub fn execute(raw_command: &str) -> bool {
                         .stdout(stdout)
                         .spawn()
                 };
+
                 match output {
                     Ok(output) => {
                         previous_command = Some(output);
@@ -167,15 +153,27 @@ pub fn execute(raw_command: &str) -> bool {
                     Err(e) => {
                         previous_command = None;
                         eprintln!("rsh: {}", e);
-                    },
-                };
+                    }
+                }
             }
         }
     }
 
-    if let Some(mut final_command) = previous_command {
-        final_command.wait().is_ok()
-    } else {
-        false
+    previous_command.is_some() && previous_command.unwrap().wait().is_ok()
+}
+
+fn change_directory(directory: Option<&str>) -> bool {
+    let path = match directory {
+        None => var("HOME").expect("rsh: unexpected internal error"),
+        Some("~") => var("HOME").expect("rsh: unexpected internal error"),
+        Some(path) => String::from(path)
+    };
+
+    return match set_current_dir(Path::new(&path)) {
+        Ok(_) => true,
+        Err(err) => {
+            eprintln!("rsh: {err}");
+            false
+        }
     }
 }
