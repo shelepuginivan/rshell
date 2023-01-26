@@ -33,7 +33,7 @@ pub fn change_directory(directory: Option<&str>) -> ExecutionResult {
 /// Created variable can be accessed with `$` symbol
 /// 
 /// In the above example:
-/// ```rhs
+/// ```rsh
 ///echo $key 
 /// ```
 /// 
