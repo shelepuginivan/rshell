@@ -2,6 +2,7 @@ mod colors;
 mod parse_command;
 mod execute;
 mod execute_code;
+mod builtins;
 
 use std::env;
 use std::io::Read;
@@ -56,7 +57,7 @@ fn main() {
                 exit(5)
             }
         }
-        
+
         match execute_code(&code) {
             ExecutionResult::Error(err) => {
                 error_log(err);
