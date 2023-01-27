@@ -2,9 +2,8 @@ use core::str;
 use std::error::Error;
 use std::fs::File;
 use std::process::{Child, Command, Stdio};
-use std::env::var;
-use std::str::SplitWhitespace;
 use crate::builtins;
+use crate::utils;
 
 pub enum ExecutionResult {
     Success,
@@ -83,7 +82,7 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                 let output = if write_to_file {
                     // write to the file for the first time
                     match Command::new(command)
-                        .args(parse_args(args))
+                        .args(utils::parse_args(args))
                         .stdin(stdin)
                         .stdout(stdout)
                         .spawn() {
@@ -139,7 +138,7 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                             .spawn()
                 } else {
                     Command::new(command)
-                        .args(parse_args(args))
+                        .args(utils::parse_args(args))
                         .stdin(stdin)
                         .stdout(stdout)
                         .spawn()
@@ -159,31 +158,4 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
         Ok(_) => ExecutionResult::Success,
         Err(err) => ExecutionResult::Error(Box::new(err))
     }
-}
-
-fn parse_args(args: SplitWhitespace) -> Vec<String>
-{
-    let mut parsed_args: Vec<String> = Vec::new();
-
-    for arg in args {
-        match arg.chars().next().unwrap() {
-            '$' => {
-                if arg.len() > 0 {
-                    let variable = arg.to_string().replace('$', "");
-
-                    let value = match var(&variable) {
-                        Ok(value) => value,
-                        Err(_) => variable
-                    };
-
-                parsed_args.push(value);
-                }
-            },
-            '\'' => parsed_args.push(arg.replacen('\'', "", 1)),
-            '#' => break,
-            _ => parsed_args.push(String::from(arg))
-        }
-    }
-
-    parsed_args
 }
