@@ -66,6 +66,11 @@ fn main() {
         }
     }
 
+    unsafe {
+        libc::signal(libc::SIGINT, libc::SIG_IGN);
+        libc::signal(libc::SIGQUIT, libc::SIG_ERR);
+    }
+
     loop
     {
         let working_directory = env::current_dir()
