@@ -83,7 +83,7 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                 let output = if write_to_file {
                     // write to the file for the first time
                     match Command::new(command)
-                        .args(parse_variables_from_args(args))
+                        .args(parse_args(args))
                         .stdin(stdin)
                         .stdout(stdout)
                         .spawn() {
@@ -132,14 +132,14 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                     // and we have to output it to /dev/null
                     // if there are not
                     let stdout = if commands.peek().is_some() {Stdio::piped()} else {Stdio::null()};
-
+                    
                     Command::new("cat")
                             .arg(previous_filename)
                             .stdout(stdout)
                             .spawn()
                 } else {
                     Command::new(command)
-                        .args(parse_variables_from_args(args))
+                        .args(parse_args(args))
                         .stdin(stdin)
                         .stdout(stdout)
                         .spawn()
@@ -161,21 +161,27 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
     }
 }
 
-fn parse_variables_from_args(args: SplitWhitespace) -> Vec<String>
+fn parse_args(args: SplitWhitespace) -> Vec<String>
 {
     let mut parsed_args: Vec<String> = Vec::new();
 
     for arg in args {
-        if arg.starts_with('$') && arg.len() > 1 {
-            let variable = arg.to_string().replace('$', "");
-            let value = match var(&variable) {
-                Ok(value) => value,
-                Err(_) => variable
-            };
+        match arg.chars().next().unwrap() {
+            '$' => {
+                if arg.len() > 0 {
+                    let variable = arg.to_string().replace('$', "");
 
-            parsed_args.push(value);
-        } else {
-            parsed_args.push(String::from(arg));
+                    let value = match var(&variable) {
+                        Ok(value) => value,
+                        Err(_) => variable
+                    };
+
+                parsed_args.push(value);
+                }
+            },
+            '\'' => parsed_args.push(arg.replacen('\'', "", 1)),
+            '#' => break,
+            _ => parsed_args.push(String::from(arg))
         }
     }
 
