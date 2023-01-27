@@ -3,6 +3,7 @@ mod parse_command;
 mod execute;
 mod execute_code;
 mod builtins;
+mod utils;
 
 use std::env;
 use std::io::Read;
