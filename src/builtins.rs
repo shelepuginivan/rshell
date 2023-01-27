@@ -2,6 +2,7 @@ use std::env::{set_current_dir, set_var, var};
 use std::error::Error;
 use std::path::Path;
 use crate::execute::ExecutionResult;
+use crate::utils::parse_single_argument;
 
 /// Implementation of shell built-in `cd` function
 /// 
@@ -44,14 +45,19 @@ pub fn set_variable(expression: Option<&str>) -> ExecutionResult {
         None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
     };
 
-    let key = args.next().unwrap().trim();
+    let key = parse_single_argument(args.next().unwrap().trim());
 
     let value = match args.next() {
-        Some(value) => value.trim(),
+        Some(value) => parse_single_argument(value.trim()),
         None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
     };
 
-    set_var(key, value);
+    let (parsed_key, parsed_value) = match (key, value) {
+        (Some(key), Some(value)) => (key, value),
+        (None, _) | (_, None) => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
+    };
+
+    set_var(parsed_key, parsed_value);
 
     ExecutionResult::Success
 }
