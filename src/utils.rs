@@ -1,4 +1,7 @@
+use crate::ExecutionResult;
 use std::env::var;
+use std::fs::File;
+use std::process::Stdio;
 use std::str::SplitWhitespace;
 
 pub fn parse_single_argument(argument: &str) -> Option<String> {
@@ -35,4 +38,39 @@ pub fn parse_args(args: SplitWhitespace) -> Vec<String>
     }
 
     parsed_args
+}
+
+pub fn generate_stdout(command: Option<&&str>) -> Result<(Stdio, bool), ExecutionResult> {
+    let mut write_to_file = false;
+
+    let stdio = if command.is_some() {
+        let append = command.unwrap().starts_with("&a");
+            let write = command.unwrap().starts_with("&w");
+
+            let stdio = if append || write {
+                let filename_untrimmed = command.unwrap().replace("&a ", "").replace("&w ", "");
+                let filename = filename_untrimmed.trim();
+
+                let file = match File::options()
+                    .create(!append)
+                    .append(append)
+                    .write(write)
+                    .truncate(write)
+                    .open(filename) {
+                        Ok(file) => file,
+                        Err(err) => return Err(ExecutionResult::Error(Box::new(err)))
+                    };
+
+                write_to_file = true;
+                Stdio::from(file)
+            } else {
+                Stdio::piped()
+            };
+
+            stdio
+    } else {
+        Stdio::inherit()
+    };
+
+    return Ok((stdio, write_to_file));
 }
