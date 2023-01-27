@@ -1,6 +1,7 @@
 use core::str;
 use std::error::Error;
 use std::fs::File;
+use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, Stdio};
 use crate::builtins;
 use crate::utils;
@@ -109,11 +110,18 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                             .stdout(stdout)
                             .spawn()
                 } else {
-                    Command::new(command)
+                    unsafe {
+                        Command::new(command)
+                        .pre_exec(|| {
+                            libc::signal(libc::SIGINT, libc::SIG_DFL);
+                            libc::signal(libc::SIGQUIT, libc::SIG_ERR);
+                            Ok(())
+                        })
                         .args(utils::parse_args(args))
                         .stdin(stdin)
                         .stdout(stdout)
                         .spawn()
+                    }
                 };
 
                 match output {
