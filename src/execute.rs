@@ -20,8 +20,6 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
         .replace(">>", "| &a")
         .replace(">", "| &w");
         
-
-    let mut write_to_file;
     
     let mut commands = binding.split(" | ").peekable();
 
@@ -29,8 +27,6 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
     let mut previous_command = None;
 
     while let Some(cmd) = commands.next() {
-        write_to_file = false;
-
         let mut tokens = cmd.split_whitespace();
 
         let command = tokens.next().unwrap();
@@ -50,33 +46,9 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                             |output: Child| Stdio::from(output.stdout.unwrap())
                         );
 
-                let stdout = if commands.peek().is_some() {
-                    let append = commands.peek().unwrap().starts_with("&a");
-                    let write = commands.peek().unwrap().starts_with("&w");
-
-                    let stdio = if append || write {
-                        let filename_untrimmed = commands.peek().unwrap().replace("&a ", "").replace("&w ", "");
-                        let filename = filename_untrimmed.trim();
-
-                        let file = match File::options()
-                            .create(!append)
-                            .append(append)
-                            .write(write)
-                            .truncate(write)
-                            .open(filename) {
-                                Ok(file) => file,
-                                Err(err) => return ExecutionResult::Error(Box::new(err))
-                            };
-
-                        write_to_file = true;
-                        Stdio::from(file)
-                    } else {
-                        Stdio::piped()
-                    };
-
-                    stdio
-                } else {
-                    Stdio::inherit()
+                let (stdout, write_to_file) = match utils::generate_stdout(commands.peek()) {
+                    Ok((stdio, write)) => (stdio, write),
+                    Err(execution_error) => return execution_error
                 };
 
                 let output = if write_to_file {
@@ -152,6 +124,10 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                 }
             }
         }
+    }
+
+    if previous_command.is_none() {
+        return ExecutionResult::Success;
     }
 
     match previous_command.unwrap().wait() {
