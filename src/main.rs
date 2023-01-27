@@ -130,7 +130,7 @@ fn generate_prompt(previous_command_succeed: bool, working_directory: std::path:
         red("*")
     };
 
-    format!("{exit_status_indicator} {working_directory} $ ")
+    format!("{BOLD}{exit_status_indicator} {BOLD}{working_directory}{RESET} $ ")
 }
 
 fn error_log(error: Box<dyn Error>) {
