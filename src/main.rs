@@ -10,6 +10,7 @@ use std::io::Read;
 use std::process::exit;
 use std::error::Error;
 use std::fs::File;
+use std::path::Path;
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
 use execute::*;
@@ -20,6 +21,7 @@ use parse_command::parse_command;
 fn main() {
     let home: String = env::var("HOME").unwrap();
     let history_path: &str = &format!("{home}/.rsh_history");
+    let profile_path: &str = &format!("{home}/.rsh_profile");
     // TODO: implement config parser
     // let config_path: String = format!("{}/.rshrc", home);
     let rsh_internal_err = format!("{}: unexpected internal error", red("rsh"));
@@ -32,7 +34,22 @@ fn main() {
         File::create(history_path).expect(&format!("{}: failed to create history file", red("rsh")));
     }
 
+    if !Path::new(profile_path).exists() {
+        File::create(profile_path).expect(&rsh_internal_err);
+    }
+
     let mut previous_command_succeed = true; 
+
+    match execute_file(profile_path) {
+        ExecutionResult::Error(err) => {
+            error_log(err);
+            println!("the above error occurred in profile: {profile_path}")
+        },
+        ExecutionResult::Exit => exit(0),
+        _ => {}
+    }
+
+    env::set_var("profile", profile_path);
 
     if env::args().len() > 1 {
         let filename = match env::args().nth(1) {
@@ -40,30 +57,11 @@ fn main() {
             None => exit(22)
         };
 
-        let mut code = String::new();
-        let mut file = match File::options()
-            .read(true)
-            .open(std::path::Path::new(&filename)) {
-            Ok(file) => file,
-            Err(err) => {
-                error_log(Box::new(err));
-                exit(2)
-            }
-        };
-
-        match file.read_to_string(&mut code) {
-            Ok(_) => {},
-            Err(err) => {
-                error_log(Box::new(err));
-                exit(5)
-            }
-        }
-
-        match execute_code(&code) {
+        match execute_file(filename) {
             ExecutionResult::Error(err) => {
                 error_log(err);
                 exit(1)
-            },
+            }
             _ => exit(0)
         }
     }
@@ -137,4 +135,28 @@ fn generate_prompt(previous_command_succeed: bool, working_directory: std::path:
 
 fn error_log(error: Box<dyn Error>) {
     eprintln!("{}: {error}", red("rsh"));
+}
+
+fn execute_file<P>(path: P) -> ExecutionResult
+where P: AsRef<Path> {
+    let mut code = String::new();
+    let mut file = match File::options()
+            .read(true)
+            .open(path) {
+            Ok(file) => file,
+            Err(err) => {
+                error_log(Box::new(err));
+                exit(2)
+            }
+        };
+
+        match file.read_to_string(&mut code) {
+            Ok(_) => {},
+            Err(err) => {
+                error_log(Box::new(err));
+                exit(5)
+            }
+        }
+
+        execute_code(&code)
 }
