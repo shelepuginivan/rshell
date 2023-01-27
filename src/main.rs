@@ -38,19 +38,6 @@ fn main() {
         File::create(profile_path).expect(&rsh_internal_err);
     }
 
-    let mut previous_command_succeed = true; 
-
-    match execute_file(profile_path) {
-        ExecutionResult::Error(err) => {
-            error_log(err);
-            println!("the above error occurred in profile: {profile_path}")
-        },
-        ExecutionResult::Exit => exit(0),
-        _ => {}
-    }
-
-    env::set_var("profile", profile_path);
-
     if env::args().len() > 1 {
         let filename = match env::args().nth(1) {
             Some(filename) => filename,
@@ -65,6 +52,20 @@ fn main() {
             _ => exit(0)
         }
     }
+
+    let mut previous_command_succeed = true; 
+
+    match execute_file(profile_path) {
+        ExecutionResult::Error(err) => {
+            error_log(err);
+            println!("the above error occurred in profile: {profile_path}")
+        },
+        ExecutionResult::Exit => exit(0),
+        _ => {}
+    }
+
+    env::set_var("profile", profile_path);
+
 
     unsafe {
         libc::signal(libc::SIGINT, libc::SIG_IGN);
