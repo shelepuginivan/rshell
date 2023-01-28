@@ -20,7 +20,7 @@ pub fn instant_exec(stdin: Option<Child>, args: Vec<String>) -> ExecutionResult 
                 Err(err) => return ExecutionResult::Error(Box::new(err))
             };
         },
-        None => first_arg = args.to_owned().into_iter().next().unwrap()
+        None => first_arg = args.to_owned().into_iter().next().unwrap_or_default()
     };
 
     let no_exit = args.contains(&"--noexit".to_string()) || args.contains(&"-n".to_string());
