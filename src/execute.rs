@@ -6,6 +6,7 @@ use std::io::Read;
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, Stdio, exit};
 use crate::builtins;
+use crate::instants::instant_exec;
 use crate::utils::*;
 
 pub enum ExecutionResult {
@@ -43,6 +44,14 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
             "set" => return builtins::set_variable(args.next()),
 
             _ => {
+                if command.starts_with('@') {
+                    return match command {
+                        "@exec" => instant_exec(previous_command, parse_args(args)),
+                        _ => return ExecutionResult::Success
+                    }
+                }
+
+
                 let stdin = previous_command
                         .map_or(
                             Stdio::inherit(),
@@ -167,7 +176,7 @@ where P: AsRef<Path> {
             Ok(file) => file,
             Err(err) => {
                 error_log(Box::new(err));
-                exit(2)
+                return ExecutionResult::Exit;
             }
         };
 
