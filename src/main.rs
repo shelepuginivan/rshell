@@ -1,21 +1,18 @@
 mod colors;
 mod parse_command;
 mod execute;
-mod execute_code;
 mod builtins;
 mod utils;
 
 use std::env;
-use std::io::Read;
-use std::process::exit;
-use std::error::Error;
 use std::fs::File;
 use std::path::Path;
+use std::process::exit;
 use rustyline::Editor;
 use rustyline::error::ReadlineError;
-use execute::*;
 use colors::*;
-use execute_code::execute_code;
+use execute::*;
+use utils::*;
 use parse_command::parse_command;
 
 fn main() {
@@ -137,32 +134,4 @@ fn generate_prompt(previous_command_succeed: bool, working_directory: std::path:
     };
 
     format!("{BOLD}{exit_status_indicator} {BOLD}{working_directory}{RESET} $ ")
-}
-
-fn error_log(error: Box<dyn Error>) {
-    eprintln!("{}: {error}", red("rsh"));
-}
-
-fn execute_file<P>(path: P) -> ExecutionResult
-where P: AsRef<Path> {
-    let mut code = String::new();
-    let mut file = match File::options()
-            .read(true)
-            .open(path) {
-            Ok(file) => file,
-            Err(err) => {
-                error_log(Box::new(err));
-                exit(2)
-            }
-        };
-
-        match file.read_to_string(&mut code) {
-            Ok(_) => {},
-            Err(err) => {
-                error_log(Box::new(err));
-                exit(5)
-            }
-        }
-
-        execute_code(&code)
 }
