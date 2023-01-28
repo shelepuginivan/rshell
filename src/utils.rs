@@ -1,8 +1,10 @@
-use crate::ExecutionResult;
+use std::error::Error;
 use std::env::var;
 use std::fs::File;
 use std::process::Stdio;
 use std::str::SplitWhitespace;
+use crate::ExecutionResult;
+use crate::colors::*;
 
 pub fn parse_single_argument(argument: &str) -> Option<String> {
     return match argument.chars().next().unwrap() {
@@ -73,4 +75,8 @@ pub fn generate_stdout(command: Option<&&str>) -> Result<(Stdio, bool), Executio
     };
 
     return Ok((stdio, write_to_file));
+}
+
+pub fn error_log(error: Box<dyn Error>) {
+    eprintln!("{}: {error}", red("rsh"));
 }
