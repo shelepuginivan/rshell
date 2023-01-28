@@ -3,6 +3,7 @@ mod parse_command;
 mod execute;
 mod builtins;
 mod utils;
+mod instants;
 
 use std::env;
 use std::fs::File;
@@ -66,7 +67,7 @@ fn main() {
 
     unsafe {
         libc::signal(libc::SIGINT, libc::SIG_IGN);
-        libc::signal(libc::SIGQUIT, libc::SIG_ERR);
+        libc::signal(libc::SIGQUIT, libc::SIG_IGN);
     }
 
     loop
