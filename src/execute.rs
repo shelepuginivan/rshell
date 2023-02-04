@@ -6,7 +6,7 @@ use std::io::Read;
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, Stdio, exit};
 use crate::builtins;
-use crate::instants::instant_exec;
+use crate::instants::*;
 use crate::utils::*;
 
 pub enum ExecutionResult {
@@ -47,6 +47,7 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
                 if command.starts_with('@') {
                     return match command {
                         "@exec" => instant_exec(previous_command, parse_args(args)),
+                        "@format" => instant_format(previous_command, parse_args(args)),
                         _ => return ExecutionResult::Success
                     }
                 }
