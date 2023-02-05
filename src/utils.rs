@@ -80,3 +80,14 @@ pub fn generate_stdout(command: Option<&&str>) -> Result<(Stdio, bool), Executio
 pub fn error_log(error: Box<dyn Error>) {
     eprintln!("{}: {error}", red("rsh"));
 }
+
+pub fn get_alias(alias: &str) -> String {
+    if alias.starts_with('\'') {
+        return alias.replacen('\'', "", 1);
+    }
+
+    match var(alias) {
+        Ok(value) => value,
+        Err(_) => alias.to_owned()
+    }
+}
