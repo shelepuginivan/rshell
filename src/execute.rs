@@ -33,7 +33,9 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
     while let Some(cmd) = commands.next() {
         let mut tokens = cmd.split_whitespace();
 
-        let command = tokens.next().unwrap();
+        let temp_command = get_alias(tokens.next().unwrap());
+        let command = temp_command.as_str();
+        
         let mut args = tokens;
 
         match command {
@@ -42,6 +44,8 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
             "exit" => return ExecutionResult::Exit,
 
             "set" => return builtins::set_variable(args.next()),
+
+            "alias" => return builtins::set_alias(args.next()),
 
             _ => {
                 if command.starts_with('@') {
