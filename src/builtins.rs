@@ -61,3 +61,34 @@ pub fn set_variable(expression: Option<&str>) -> ExecutionResult {
 
     ExecutionResult::Success
 }
+
+/// Alias implementation
+/// 
+/// Creates an alias
+/// ```rsh
+/// alias cat=bat
+/// ```
+/// 
+/// Now bat will be executed instead of cat
+/// 
+/// To execute the exact command, use literal strings (e.g. `'cat`)
+pub fn set_alias(expression: Option<&str>) -> ExecutionResult {
+    let mut args = match expression {
+        Some(args) => args.split('='),
+        None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
+    };
+
+    let name = match args.next() {
+        Some(name) => name.trim(),
+        None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
+    };
+
+    let value = match args.next() {
+        Some(value) => value.trim(),
+        None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
+    };
+
+    set_var(name, value);
+
+    ExecutionResult::Success
+}
