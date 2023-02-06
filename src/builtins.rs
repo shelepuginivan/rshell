@@ -84,7 +84,7 @@ pub fn set_alias(expression: Option<&str>) -> ExecutionResult {
     };
 
     let value = match args.next() {
-        Some(value) => value.trim(),
+        Some(value) => "__ALIAS_".to_owned() + value.trim(),
         None => return ExecutionResult::Error(Box::<dyn Error>::from("expression required"))
     };
 

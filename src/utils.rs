@@ -86,7 +86,7 @@ pub fn get_alias(alias: &str) -> String {
         return alias.replacen('\'', "", 1);
     }
 
-    match var(alias) {
+    match var("__ALIAS_".to_owned() + alias) {
         Ok(value) => value,
         Err(_) => alias.to_owned()
     }
