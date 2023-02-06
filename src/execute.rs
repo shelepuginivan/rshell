@@ -25,6 +25,10 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
         .replace(">", "| &w");
     
     for token in binding.clone().replace('=', " ").split_whitespace() {
+        if token.starts_with('\'') {
+            continue
+        }
+
         binding = binding.replace(token, &get_alias(token));
     }
     
