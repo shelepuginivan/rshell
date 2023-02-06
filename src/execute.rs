@@ -20,10 +20,13 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
         return ExecutionResult::Success;
     }
 
-    let binding = command_with_pipes
+    let mut binding = command_with_pipes
         .replace(">>", "| &a")
         .replace(">", "| &w");
-        
+    
+    for token in binding.clone().replace('=', " ").split_whitespace() {
+        binding = binding.replace(token, &get_alias(token));
+    }
     
     let mut commands = binding.split(" | ").peekable();
 
@@ -45,7 +48,7 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
 
             "set" => return builtins::set_variable(args.next()),
 
-            "alias" => return builtins::set_alias(args.next()),
+            "alias" => return builtins::set_alias(Some(&args.collect::<Vec<&str>>().join(" "))),
 
             _ => {
                 if command.starts_with('@') {
