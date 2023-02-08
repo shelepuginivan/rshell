@@ -104,13 +104,13 @@ pub fn exec_function(function_name: &str, mut args: SplitWhitespace) -> Executio
     };
 
     for token in function_body.clone().split_whitespace() {
-        if token.starts_with('&') {
+        if token.starts_with('&') && !token.starts_with("&&") {
             match args.next() {
                 Some(value) => function_body = function_body.replace(token.trim(), value),
-                None => return ExecutionResult::Error(Box::<dyn Error>::from("not enough arguments"))
+                None => break
             };
         }
     };
 
-    return execute_code(&function_body);
+    execute_code(&function_body)
 }
