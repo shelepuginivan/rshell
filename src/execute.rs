@@ -175,7 +175,11 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
 }
 
 pub fn execute_code(code: &str) -> ExecutionResult {
-    for line in code.split("\n") {
+    let parsed_code = code.replace("{\n", "")
+                                .replace('}', "")
+                                .replace("\n", "; ");
+                                
+    for line in parsed_code.split("\n") {
         let separate_commands = parse_command(line);
         for separate_command in separate_commands {
             for command_with_pipes in separate_command{

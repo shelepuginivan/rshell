@@ -105,7 +105,9 @@ pub fn function_declaration(args: SplitWhitespace) -> ExecutionResult {
 
     let mut function_body = String::new();
 
-    if tokens.next().unwrap() == "{" {
+    if tokens.clone().peekable().peek().unwrap() == &"{" {
+        tokens.next();
+        
         let cwd_path = current_dir().unwrap_or_default();
         let cwd = cwd_path.to_str().unwrap_or_default();
 

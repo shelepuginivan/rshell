@@ -12,7 +12,7 @@
 pub fn parse_command(command: &str) -> Vec<Vec<&str>> {
     let mut separate_commands: Vec<Vec<&str>> = Vec::new();
 
-    for independent_command in command.split(";").collect::<Vec<&str>>() {
+    for independent_command in command.split("; ").collect::<Vec<&str>>() {
         separate_commands.push(independent_command.split(" && ").collect());
     }
     separate_commands
