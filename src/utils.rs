@@ -5,6 +5,7 @@ use std::process::Stdio;
 use std::str::SplitWhitespace;
 use crate::ExecutionResult;
 use crate::colors::*;
+use crate::execute::execute_code;
 
 pub fn parse_single_argument(argument: &str) -> Option<String> {
     return match argument.chars().next().unwrap() {
@@ -90,4 +91,26 @@ pub fn get_alias(alias: &str) -> String {
         Ok(value) => value,
         Err(_) => alias.to_owned()
     }
+}
+
+pub fn is_function(name: &str) -> bool {
+    var("__FN_".to_owned() + name).is_ok()
+}
+
+pub fn exec_function(function_name: &str, mut args: SplitWhitespace) -> ExecutionResult {
+    let mut function_body = match var("__FN_".to_owned() + function_name) {
+        Ok(code) => code,
+        Err(err) => return ExecutionResult::Error(Box::new(err))
+    };
+
+    for token in function_body.clone().split_whitespace() {
+        if token.starts_with('&') {
+            match args.next() {
+                Some(value) => function_body = function_body.replace(token.trim(), value),
+                None => return ExecutionResult::Error(Box::<dyn Error>::from("not enough arguments"))
+            };
+        }
+    };
+
+    return execute_code(&function_body);
 }
