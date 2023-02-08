@@ -55,7 +55,13 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
 
             "alias" => return builtins::set_alias(Some(&args.collect::<Vec<&str>>().join(" "))),
 
+            "fn" => return builtins::function_declaration(args),
+
             _ => {
+                if is_function(command) {
+                    return exec_function(command, args);
+                }
+
                 if command.starts_with('@') {
                     return match command {
                         "@exec" => instant_exec(previous_command, parse_args(args)),
