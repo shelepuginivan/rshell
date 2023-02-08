@@ -7,6 +7,7 @@ use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, Stdio, exit};
 use crate::builtins;
 use crate::instants::*;
+use crate::parse_command::parse_command;
 use crate::utils::*;
 
 pub enum ExecutionResult {
@@ -169,11 +170,20 @@ pub fn execute(command_with_pipes: &str) -> ExecutionResult {
 
 pub fn execute_code(code: &str) -> ExecutionResult {
     for line in code.split("\n") {
-        match execute(line) {
-            ExecutionResult::Success => continue,
-            ExecutionResult::Error(err) => return ExecutionResult::Error(err),
-            ExecutionResult::Exit => return ExecutionResult::Exit
-        };
+        let separate_commands = parse_command(line);
+        for separate_command in separate_commands {
+            for command_with_pipes in separate_command{
+                match execute(command_with_pipes) {
+                    ExecutionResult::Success => continue,
+                    ExecutionResult::Error(err) => {
+                        error_log(err);
+                        break;
+                    },
+                    ExecutionResult::Exit => return ExecutionResult::Exit
+                };
+            }
+            
+        }
     }
 
     ExecutionResult::Success
