@@ -90,7 +90,7 @@ And this is what you will see in terminal:
 ```
 anyway
 rsh: No such file or directory (os error 2)
-will output
+will output this
 ```
 
 ## 5. Comments
