@@ -83,11 +83,13 @@ pub fn error_log(error: Box<dyn Error>) {
 }
 
 pub fn get_alias(alias: &str) -> String {
+    println!("{alias}");
+
     if alias.starts_with('\'') {
         return alias.replacen('\'', "", 1);
     }
 
-    match var("__ALIAS_".to_owned() + alias) {
+    match var("__ALIAS_".to_owned() + alias.trim()) {
         Ok(value) => value,
         Err(_) => alias.to_owned()
     }
